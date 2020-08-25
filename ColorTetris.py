@@ -103,9 +103,10 @@ class CursesWindow:
 
 
 class ScoreWindow(CursesWindow):
-    def __init__(self, game):
+    def __init__(self, game, window_length, window_width):
         CursesWindow.__init__(self, game)
-        self.window = curses.newwin(5, 14, 0, game.board.array_width + 3)
+        self.window = curses.newwin(window_length, window_width,
+                                    0, game.board.array_width + 3)
         self.window.border('*', '*', '*', '*', '*', '*', '*', '*')
         self.update()
 
@@ -151,9 +152,10 @@ class BoardWindow(CursesWindow):
 
 
 class PreviewWindow(CursesWindow):
-    def __init__(self, game):
+    def __init__(self, game, window_length, window_width):
         CursesWindow.__init__(self, game)
-        self.window = curses.newwin(6, 6, 5, game.board.array_width + 3)
+        self.window = curses.newwin(window_length, window_width,
+                                    5, game.board.array_width + 3)
         self.update()
 
     def update(self):
@@ -168,8 +170,6 @@ class PreviewWindow(CursesWindow):
                         '1',
                         curses.color_pair(self.game.next_piece.color)
                     )
-                # else:
-                #     self.window.addstr(i + 1, j + 1, '.')
 
         self.window.refresh()
 
@@ -190,8 +190,8 @@ class GUI:
         curses.init_pair(7, curses.COLOR_WHITE, curses.COLOR_BLACK)
 
         self.board_window = BoardWindow(game)
-        self.score_window = ScoreWindow(game)
-        self.piece_preview_window = PreviewWindow(game)
+        self.score_window = ScoreWindow(game, 5, 14)
+        self.piece_preview_window = PreviewWindow(game, 6, 6)
 
         curses.noecho()
         curses.cbreak()
@@ -320,9 +320,6 @@ class Game:
         exit()
 
 
-def main(stdscreen):
-    game = Game(16, 10)
-    game.main_loop()
-
-
-curses.wrapper(main)
+# Run the game
+game = Game(board_length=16, board_width=10)
+game.main_loop()
