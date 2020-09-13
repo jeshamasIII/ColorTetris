@@ -37,7 +37,7 @@ class TetrisBoard:
             self.active_piece = piece
             self.update_array(new_active_piece_indices)
             piece.indices = new_active_piece_indices
-            piece.center_of_rotation[1] += self.num_columns // 2 - 1
+            piece.center_of_rotation[1] += int(self.num_columns / 2) - 1
             piece.last_move_overlap = False
         else:
             piece.last_move_overlap = True
@@ -48,7 +48,7 @@ class TetrisBoard:
 
         x, y = self.active_piece.center_of_rotation
 
-        # this translates the active piece so that it's center is now
+        # this translates the active piece so that it's center is
         # the origin, then rotates each point in indices about the origin,
         # then translates the piece so that it's center is at it's
         # original position
@@ -83,7 +83,7 @@ class TetrisBoard:
               and not self.no_overlap(temp_active_piece_indices)):
             self.active_piece.last_move_overlap = True
 
-        # this is necessary to tell when a piece hits the the bottom of the
+        # this is necessary to tell when a piece hits the bottom of the
         # board
         elif not self.in_bounds(temp_active_piece_indices) and direction == 'down':
             self.active_piece.last_move_overlap = True
@@ -159,8 +159,8 @@ class ScoreWindow(CursesWindow):
         # the window's border adds two extra rows
         self.num_rows = self.num_items_to_display + 2
 
-        # this is somewhat arbitrary
-        self.num_columns = 14
+        # 6 digits for the string 'score:' + max_num_score_digits + 2 for border
+        self.num_columns = 6 + game.max_num_score_digits + 2
 
         self.window = curses.newwin(
             self.num_rows,
@@ -169,10 +169,11 @@ class ScoreWindow(CursesWindow):
             board_window.num_columns + 1
         )
 
-        self.window.border('*', '*', '*', '*', '*', '*', '*', '*')
         self.update()
 
     def update(self):
+        self.window.erase()
+        self.window.border('*', '*', '*', '*', '*', '*', '*', '*')
         self.window.addstr(1, 1, f'Score:{self.game.score}')
         self.window.addstr(2, 1, f'Lines:{self.game.lines_completed}')
         self.window.addstr(3, 1, f'Level:{self.game.level}')
@@ -194,11 +195,11 @@ class PiecePreviewWindow(CursesWindow):
             board_window.num_columns + 1
         )
 
+        self.window.border('*', '*', '*', '*', '*', '*', '*', '*')
         self.update()
 
     def update(self):
         self.window.erase()
-        self.window.border('*', '*', '*', '*', '*', '*', '*', '*')
 
         # only update the interior of the window
         for i in range(self.num_rows - 2):
@@ -220,6 +221,9 @@ class GUI:
 
         curses.initscr()
         curses.start_color()
+        curses.noecho()
+        curses.cbreak()
+        curses.curs_set(0)
 
         curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK)
         curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
@@ -234,11 +238,8 @@ class GUI:
         self.piece_preview_window = PiecePreviewWindow(game, self.board_window,
                                                        self.score_window)
 
-        curses.noecho()
-        curses.cbreak()
         self.board_window.keypad(True)
         self.board_window.nodelay(True)
-        curses.curs_set(0)
 
 
 class Game:
@@ -246,10 +247,11 @@ class Game:
         self.board = TetrisBoard(board_num_rows, board_num_columns)
 
         self.score = 0
+        self.max_num_score_digits = 8
         self.lines_completed = 0
         self.level = 0
 
-        self.SPACE_KEY_ASCII_VALUE = 32
+        self.SPACE_KEY_VALUE = 32
 
         # approximate frame rate
         self.frame_rate = 60
@@ -286,7 +288,7 @@ class Game:
             loop_count += 1
 
             force_move = (loop_count % max(self.frame_rate - self.level, 1) == 0)
-            hard_drop = (keyboard_input == self.SPACE_KEY_ASCII_VALUE)
+            hard_drop = (keyboard_input == self.SPACE_KEY_VALUE)
             if force_move or hard_drop:
                 if hard_drop:
                     while not self.board.active_piece.last_move_overlap:
@@ -325,6 +327,14 @@ class Game:
                     self.score += self.points(line_count)
                     self.lines_completed += line_count
                     self.level = self.lines_completed // 2
+
+                    # Basically, reset the game to prevent the strings
+                    # corresponding to the score, lines_completed, or level
+                    # variables from exceeding the dimensions the score_window
+                    if len(str(self.score)) > self.max_num_score_digits:
+                        self.score = 0
+                        self.level = 0
+                        self.lines_completed = 0
 
                     self.GUI.score_window.update()
 
